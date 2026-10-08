@@ -1,7 +1,7 @@
 # iris
 
 A small, strict command-line reader for
-[Meadow](https://github.com/mcdearman/meadow). It hands your program one piece
+[Meadow](https://github.com/meadow-lang/meadow). It hands your program one piece
 at a time: a short option, a long option or a value. Your program decides what
 each piece means, with an ordinary `match`.
 
@@ -13,7 +13,7 @@ messages.
 ## Install
 
 ```sh
-meadow add mcdearman/Iris
+meadow add meadow-lang/Iris
 ```
 
 ## Use
