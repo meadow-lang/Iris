@@ -19,40 +19,30 @@ fun codeAt at =
 -- grapheme extenders. The table is ranges, first and last, 8 digits each.
 fun escapedAsUnicode cp =
   let rec search lo hi =
-    if lo >= hi
-    then False
+    if lo >= hi then False
     else
       let mid = (lo + hi) / 2 in
-      if cp < codeAt (mid * 8)
-      then search lo mid
-      else if cp > codeAt (mid * 8 + 4)
-      then search (mid + 1) hi
+      if cp < codeAt (mid * 8) then search lo mid
+      else if cp > codeAt (mid * 8 + 4) then search (mid + 1) hi
       else True
-  in
-  search 0 (stringByteLength escapedRanges / 8)
+  in search 0 (stringByteLength escapedRanges / 8)
 
 fun hex n =
   let digits = "0123456789abcdef" in
-  let rec go m acc = if m == 0 then acc else go (m / 16) (stringSlice digits (m % 16) (m % 16 + 1) ++ acc) in
-  if n == 0 then "0" else go n ""
+  let rec go m acc =
+    if m == 0 then acc else go (m / 16) (stringSlice digits (m % 16) (m % 16 + 1) ++ acc)
+  in if n == 0 then "0" else go n ""
 
 -- One character as Rust's `Debug` for strings writes it.
 fun escapeChar c =
   let cp = charCode c in
-  if cp == 0
-  then "\\0"
-  else if cp == 9
-  then "\\t"
-  else if cp == 13
-  then "\\r"
-  else if cp == 10
-  then "\\n"
-  else if cp == 92
-  then "\\\\"
-  else if cp == 34
-  then "\\\""
-  else if escapedAsUnicode cp
-  then "\\u{${hex cp}}"
+  if cp == 0 then "\\0"
+  else if cp == 9 then "\\t"
+  else if cp == 13 then "\\r"
+  else if cp == 10 then "\\n"
+  else if cp == 92 then "\\\\"
+  else if cp == 34 then "\\\""
+  else if escapedAsUnicode cp then "\\u{${hex cp}}"
   else charsToString #[c]
 
 -- `s` in double quotes, escaped as Rust's `{:?}` does.
