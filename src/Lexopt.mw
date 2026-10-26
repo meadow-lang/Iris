@@ -10,8 +10,8 @@ use Std.Ref (modify)
 use Iris.Debug (debugString)
 
 -- One piece of the command line.
-@pub data Arg =
-  -- `-c`, alone or in a run like `-abc`.
+@pub data Arg
+  = -- `-c`, alone or in a run like `-abc`.
   Short Char
   -- `--name`, without the dashes.
   | Long String
@@ -19,8 +19,8 @@ use Iris.Debug (debugString)
   | Value String
 
 -- What went wrong.
-@pub data Error =
-  -- An option, if one was just read, needs a value and none is left.
+@pub data Error
+  = -- An option, if one was just read, needs a value and none is left.
   MissingValue (Maybe String)
   -- An option the program does not know.
   | UnexpectedOption String
@@ -40,7 +40,8 @@ use Iris.Debug (debugString)
   | Error.MissingValue (Just option) -> "missing argument for option '${option}'"
   | Error.UnexpectedOption option -> "invalid option '${option}'"
   | Error.UnexpectedArgument value -> "unexpected argument ${debugString value}"
-  | Error.UnexpectedValue option value -> "unexpected argument for option '${option}': ${debugString value}"
+  | Error.UnexpectedValue option value ->
+      "unexpected argument for option '${option}': ${debugString value}"
   | Error.ParsingFailed value reason -> "cannot parse argument ${debugString value}: ${reason}"
   | Error.Custom message -> message
 
@@ -59,8 +60,8 @@ use Iris.Debug (debugString)
 
 -- --- the parser ---------------------------------------------------------------------------
 
-data Phase =
-  Ready
+data Phase
+  = Ready
   -- The value of `--option=value`, not yet taken.
   | Pending String
   -- A run of short options, and the byte where the next one starts.
@@ -68,7 +69,10 @@ data Phase =
   -- After `--`: everything is a value.
   | Finished
 
-data LastOption = NoOption | ShortOption Char | LongOption String
+data LastOption
+  = NoOption
+  | ShortOption Char
+  | LongOption String
 
 record Inner = {
   args : [String],
@@ -81,9 +85,7 @@ record Inner = {
 -- A command line being read, one piece at a time.
 @pub data Parser = Parser (Ref Inner)
 
-fun inner p =
-  match p with
-  | Parser r -> r
+fun inner p = match p with | Parser r -> r
 
 fun fresh binName args =
   let start =
@@ -94,8 +96,7 @@ fun fresh binName args =
       binName = binName,
       shortEquals = True
     }
-  in
-  Parser (newRef start)
+  in Parser (newRef start)
 
 -- A parser for `args`, which do not include the program's name.
 @pub fun parserFromArgs args = fresh None args
@@ -137,10 +138,7 @@ fun lastOptionText p =
   | LastOption.ShortOption c -> Just "-${charsToString #[c]}"
   | LastOption.LongOption name -> Just name
 
-fun lastOptionOr p =
-  match lastOptionText p with
-  | Just text -> text
-  | None -> ""
+fun lastOptionOr p = match lastOptionText p with | Just text -> text | None -> ""
 
 -- The character starting at byte `at`, and how many bytes it takes.
 fun charAtByte s at =
@@ -163,16 +161,13 @@ fun hasPending p =
 fun rawOptionalValue p =
   let (s : Inner) = state p in
   match s.phase with
-  | Phase.Pending value ->
-      let _ = setPhase p Phase.Ready in
-      Just (value, True)
+  | Phase.Pending value -> let _ = setPhase p Phase.Ready in Just (value, True)
   | Phase.Shorts arg at ->
       let _ = setPhase p Phase.Ready in
       let n = stringByteLength arg in
-      if at >= n
-      then None
-      else if toInt (stringByteAt arg at) == 61 and s.shortEquals
-      then Just (stringSlice arg (at + 1) n, True)
+      if at >= n then None
+      else if toInt (stringByteAt arg at) == 61 and s.shortEquals then
+        Just (stringSlice arg (at + 1) n, True)
       else Just (stringSlice arg at n, False)
   | _ -> None
 
@@ -191,25 +186,18 @@ fun rawOptionalValue p =
       let _ = setPhase p Phase.Ready in
       Err (Error.UnexpectedValue (lastOptionOr p) value)
   | Phase.Shorts arg at ->
-      if at >= stringByteLength arg
-      then
-        let _ = setPhase p Phase.Ready in
-        readArg p
+      if at >= stringByteLength arg then let _ = setPhase p Phase.Ready in readArg p
       else
         (match charAtByte arg at with
          | (c, n) ->
-             if charCode c == 61 and at > 1 and s.shortEquals
-             then
+             if charCode c == 61 and at > 1 and s.shortEquals then
                let option = lastOptionOr p in
-               let value =
-                 match optionalValue p with
-                 | Just v -> v
-                 | None -> ""
-               in
+               let value = match optionalValue p with | Just v -> v | None -> "" in
                Err (Error.UnexpectedValue option value)
              else
-               let advance = \(t : Inner) ->
-                 { t | phase = Phase.Shorts arg (at + n), lastOption = LastOption.ShortOption c }
+               let advance =
+                 \(t : Inner) ->
+                   { t | phase = Phase.Shorts arg (at + n), lastOption = LastOption.ShortOption c }
                in
                let _ = update p advance in
                Ok (Just (Arg.Short c)))
@@ -223,21 +211,15 @@ fun readArg p =
   match takeArg p with
   | None -> Ok None
   | Just arg ->
-      if arg == "--"
-      then
-        let _ = setPhase p Phase.Finished in
-        nextArg p
-      else if S.startsWith "--" arg
-      then
+      if arg == "--" then let _ = setPhase p Phase.Finished in nextArg p
+      else if S.startsWith "--" arg then
         match S.indexOf "=" arg with
         | Just at ->
             let _ = setPhase p (Phase.Pending (S.drop arg (at + 1))) in
             Ok (Just (setLong p (S.take arg at)))
         | None -> Ok (Just (setLong p arg))
-      else if stringByteLength arg > 1 and toInt (stringByteAt arg 0) == 45
-      then
-        let _ = setPhase p (Phase.Shorts arg 1) in
-        nextArg p
+      else if stringByteLength arg > 1 and toInt (stringByteAt arg 0) == 45 then
+        let _ = setPhase p (Phase.Shorts arg 1) in nextArg p
       else Ok (Just (Arg.Value arg))
 
 -- The value of the option just read: attached to it, or the next argument,
@@ -265,20 +247,18 @@ fun takeIfNormal p = if nextIsNormal p then takeArg p else None
 -- Every value of the option just read: one attached to it, and the arguments
 -- after it up to the next option. At least one, or an error.
 @pub fun values p =
-  if hasPending p or nextIsNormal p
-  then
+  if hasPending p or nextIsNormal p then
     let rec rest acc =
       match takeIfNormal p with
       | Just v -> rest (V.pushBack acc v)
       | None -> acc
-    in
-    match rawOptionalValue p with
-    | Just (v, True) -> Ok [v]
-    | Just (v, False) -> Ok (rest [v])
-    | None ->
-        match takeIfNormal p with
-        | Just v -> Ok (rest [v])
-        | None -> Ok V.empty
+    in match rawOptionalValue p with
+       | Just (v, True) -> Ok [v]
+       | Just (v, False) -> Ok (rest [v])
+       | None ->
+           match takeIfNormal p with
+           | Just v -> Ok (rest [v])
+           | None -> Ok V.empty
   else Err (Error.MissingValue (lastOptionText p))
 
 -- Checks that the last option has no value attached, as the crate's

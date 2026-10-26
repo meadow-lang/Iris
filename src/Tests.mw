@@ -19,8 +19,9 @@ use Iris.Debug (debugString)
 
 @cfg(test)
 fun num i n =
-  let rec go k acc = if k >= n then acc else go (k + 1) (acc * 64 + (toInt (stringByteAt cases (i + k)) - 48)) in
-  (go 0 0, i + n)
+  let rec go k acc =
+    if k >= n then acc else go (k + 1) (acc * 64 + (toInt (stringByteAt cases (i + k)) - 48))
+  in (go 0 0, i + n)
 
 @cfg(test)
 fun str i =
@@ -38,10 +39,7 @@ fun argText a =
 fun listText vs = "[${S.join "|" vs}]"
 
 @cfg(test)
-fun maybeText m =
-  match m with
-  | Just s -> "some ${s}"
-  | None -> "none"
+fun maybeText m = match m with | Just s -> "some ${s}" | None -> "none"
 
 @cfg(test)
 fun orError r f =
@@ -52,8 +50,9 @@ fun orError r f =
 @cfg(test)
 fun digitsOnly s =
   let n = stringByteLength s in
-  let rec go i = i >= n or (toInt (stringByteAt s i) >= 48 and toInt (stringByteAt s i) <= 57 and go (i + 1)) in
-  n > 0 and go 0
+  let rec go i =
+    i >= n or (toInt (stringByteAt s i) >= 48 and toInt (stringByteAt s i) <= 57 and go (i + 1))
+  in n > 0 and go 0
 
 -- Makes call `op`, reading anything it takes from `i`: what the port answers,
 -- and where the case goes on.
@@ -62,14 +61,11 @@ fun call op p i =
   match op with
   | 0 ->
       let answer =
-        orError
-        (nextArg p)
-        (\m ->
+        orError (nextArg p) (\m ->
           match m with
           | Just a -> "${argText a} / ${errorMessage (unexpected a)}"
           | None -> "none")
-      in
-      (answer, i)
+      in (answer, i)
   | 1 -> (orError (value p) (\v -> "ok ${v}"), i)
   | 2 -> (orError (values p) listText, i)
   | 3 -> (maybeText (optionalValue p), i)
@@ -83,13 +79,10 @@ fun call op p i =
         match tryRawArgs p with
         | Just rest -> "some ${listText rest}"
         | None -> "none"
-      in
-      (answer, i)
+      in (answer, i)
   | 8 ->
       (match num i 1 with
-       | (on, next) ->
-           let _ = setShortEquals (on == 1) p in
-           ("", next))
+       | (on, next) -> let _ = setShortEquals (on == 1) p in ("", next))
   | 9 -> (maybeText (binName p), i)
   | _ ->
       let parse = \s -> if digitsOnly s then Ok (stringByteLength s) else Err "not a number" in
@@ -100,35 +93,32 @@ fun runCase i =
   let withName = num i 1 in
   let count = num (snd withName) 1 in
   let rec readArgs k at acc =
-    if k >= fst count
-    then (acc, at)
+    if k >= fst count then (acc, at)
     else
       match str at with
       | (a, next) -> readArgs (k + 1) next (V.pushBack acc a)
-  in
-  match readArgs 0 (snd count) V.empty with
-  | (args, at) ->
-      let p = if fst withName == 1 then parserFromIter args else parserFromArgs args in
-      let ops = num at 1 in
-      let rec go k at2 want got =
-        if k >= fst ops
-        then (want, got, at2)
-        else
-          let op = num at2 1 in
-          match call (fst op) p (snd op) with
-          | (answer, after) ->
-              match str after with
-              | (expected, next) -> go (k + 1) next (V.pushBack want expected) (V.pushBack got answer)
-      in
-      go 0 (snd ops) V.empty V.empty
+  in match readArgs 0 (snd count) V.empty with
+     | (args, at) ->
+         let p = if fst withName == 1 then parserFromIter args else parserFromArgs args in
+         let ops = num at 1 in
+         let rec go k at2 want got =
+           if k >= fst ops then (want, got, at2)
+           else
+             let op = num at2 1 in
+             match call (fst op) p (snd op) with
+             | (answer, after) ->
+                 match str after with
+                 | (expected, next) ->
+                     go (k + 1) next (V.pushBack want expected) (V.pushBack got answer)
+         in go 0 (snd ops) V.empty V.empty
 
 @cfg(test)
 fun check i n bad =
-  if i >= stringByteLength cases
-  then (n, bad)
+  if i >= stringByteLength cases then (n, bad)
   else
     match runCase i with
-    | (want, got, next) -> check next (n + 1) (if want == got then bad else V.pushBack bad (n, want, got))
+    | (want, got, next) ->
+        check next (n + 1) (if want == got then bad else V.pushBack bad (n, want, got))
 
 -- The number of cases, and the first few where the port differs.
 @cfg(test)
