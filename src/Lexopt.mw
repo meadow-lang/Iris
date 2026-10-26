@@ -11,8 +11,7 @@ use Iris.Debug (debugString)
 
 -- One piece of the command line.
 @pub data Arg
-  = -- `-c`, alone or in a run like `-abc`.
-  Short Char
+  = Short Char -- `-c`, alone or in a run like `-abc`.
   -- `--name`, without the dashes.
   | Long String
   -- Anything else: a positional argument.
@@ -20,8 +19,7 @@ use Iris.Debug (debugString)
 
 -- What went wrong.
 @pub data Error
-  = -- An option, if one was just read, needs a value and none is left.
-  MissingValue (Maybe String)
+  = MissingValue (Maybe String) -- An option, if one was just read, needs a value and none is left.
   -- An option the program does not know.
   | UnexpectedOption String
   -- A positional argument the program does not want.
